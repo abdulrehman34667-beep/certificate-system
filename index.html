@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Certificate Verification</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="container">
+  <h2>Student Certificate Verification</h2>
+
+  <div class="search-area">
+    <input type="text" id="rollInput" placeholder="Enter Roll Number" />
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div id="certificateBox" class="certificate" style="display:none;">
+    <div class="cert-inner">
+      <h2>Certificate of Completion</h2>
+      <img id="studentImage" src="" alt="Student Image" />
+      <h3 id="name"></h3>
+      <p><b>Roll Number:</b> <span id="roll"></span></p>
+      <p><b>Course:</b> <span id="course"></span></p>
+      <p><b>Date:</b> <span id="date"></span></p>
+      <button id="downloadPdf">Download PDF</button>
+    </div>
+  </div>
+
+  <div id="notFound" style="display:none;color:red;margin-top:15px;">Roll number not found.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+async function fetchData() {
+  try {
+    const res = await fetch('/data.json', {cache: "no-store"});
+    if(!res.ok) throw new Error('data.json not found');
+    const data = await res.json();
+    return data;
+  } catch(e) {
+    console.error(e);
+    return {};
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', async ()=> {
+  const roll = document.getElementById('rollInput').value.trim();
+  if(!roll) return;
+  const data = await fetchData();
+  const entry = data[roll];
+  if(!entry) {
+    document.getElementById('certificateBox').style.display = 'none';
+    document.getElementById('notFound').style.display = 'block';
+    return;
+  }
+  document.getElementById('notFound').style.display = 'none';
+  document.getElementById('studentImage').src = entry.image;
+  document.getElementById('name').innerText = entry.name;
+  document.getElementById('roll').innerText = roll;
+  document.getElementById('course').innerText = entry.course;
+  document.getElementById('date').innerText = entry.issue_date;
+  document.getElementById('certificateBox').style.display = 'block';
+});
+
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  const name = document.getElementById('name').innerText;
+  const roll = document.getElementById('roll').innerText;
+  const course = document.getElementById('course').innerText;
+  const date = document.getElementById('date').innerText;
+  const img = document.getElementById('studentImage');
+
+  // convert image to base64
+  const imgData = await toBase64(img.src);
+  pdf.setFontSize(18);
+  pdf.text('Certificate of Completion', 20, 20);
+  pdf.addImage(imgData, 'JPEG', 20, 30, 50, 50);
+  pdf.setFontSize(12);
+  pdf.text('Name: ' + name, 20, 90);
+  pdf.text('Roll No: ' + roll, 20, 100);
+  pdf.text('Course: ' + course, 20, 110);
+  pdf.text('Date: ' + date, 20, 120);
+  pdf.save(roll + '_certificate.pdf');
+}
+
+function toBase64(url){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = function(){
+      const c = document.createElement('canvas');
+      c.width = this.width;
+      c.height = this.height;
+      c.getContext('2d').drawImage(this,0,0);
+      resolve(c.toDataURL('image/jpeg'));
+    };
+    img.onerror = () => reject('Could not load image for PDF');
+    img.src = url;
+  });
+}
+
+document.getElementById('downloadPdf').addEventListener('click', downloadPDF);
+</script>
+</body>
+</html>

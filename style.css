@@ -1,0 +1,6 @@
+*{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;background:#f0f2f5;color:#111}
+.container{max-width:900px;margin:30px auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+input[type="text"], input[type="password"], input[type="file"], input{padding:10px;margin:6px 0;width:100%;border:1px solid #ddd;border-radius:6px}
+button{padding:10px 14px;border-radius:6px;border:none;background:#0078ff;color:#fff;cursor:pointer}
+.certificate{margin-top:20px;padding:18px;border:1px solid #ddd;border-radius:6px}
+.certificate img{width:140px;height:140px;object-fit:cover;border-radius:8px;border:2px solid #222}

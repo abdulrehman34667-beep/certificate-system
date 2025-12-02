@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin Panel - Certificate System</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="container">
+  <h2>Admin Login</h2>
+  <div id="loginBox">
+    <input id="username" placeholder="Username" />
+    <input id="password" placeholder="Password" type="password" />
+    <button id="loginBtn">Login</button>
+    <div id="loginMsg" style="color:red;margin-top:8px"></div>
+  </div>
+
+  <div id="adminPanel" style="display:none;">
+    <h3>Welcome, Admin</h3>
+    <button id="logoutBtn">Logout</button>
+    <hr />
+    <h4>Add Student</h4>
+    <input id="roll" placeholder="Roll Number" />
+    <input id="name" placeholder="Student Name" />
+    <input id="course" placeholder="Course Name" />
+    <input id="date" placeholder="Issue Date (YYYY-MM-DD)" />
+    <input id="fileInput" type="file" accept="image/*" />
+    <button id="addBtn">Add & Upload to GitHub</button>
+    <div id="status" style="margin-top:10px"></div>
+
+    <hr />
+    <h4>Current data.json (preview)</h4>
+    <pre id="preview" style="max-height:300px;overflow:auto;background:#f7f7f7;padding:10px"></pre>
+    <button id="refreshBtn">Refresh Preview</button>
+  </div>
+</div>
+
+<script>
+const ADMIN_USER = 'Rehman@11'; // shown for login convenience (server also checks env)
+const ADMIN_PASS = 'Rehman@3123';
+
+function showMsg(msg, color='black'){ const s=document.getElementById('status'); s.innerText=msg; s.style.color=color; }
+
+document.getElementById('loginBtn').addEventListener('click', ()=> {
+  const u=document.getElementById('username').value.trim();
+  const p=document.getElementById('password').value.trim();
+  if(u===ADMIN_USER && p===ADMIN_PASS){
+    localStorage.setItem('admin_logged','1');
+    document.getElementById('loginBox').style.display='none';
+    document.getElementById('adminPanel').style.display='block';
+    loadPreview();
+  } else {
+    document.getElementById('loginMsg').innerText = 'Wrong credentials';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=> {
+  localStorage.removeItem('admin_logged');
+  document.getElementById('adminPanel').style.display='none';
+  document.getElementById('loginBox').style.display='block';
+});
+
+async function loadPreview(){
+  try{
+    const res = await fetch('/data.json', {cache:'no-store'});
+    const j = await res.json();
+    document.getElementById('preview').innerText = JSON.stringify(j, null, 4);
+  }catch(e){
+    document.getElementById('preview').innerText = 'Cannot load data.json';
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadPreview);
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const roll = document.getElementById('roll').value.trim();
+  const name = document.getElementById('name').value.trim();
+  const course = document.getElementById('course').value.trim();
+  const date = document.getElementById('date').value.trim();
+  const file = document.getElementById('fileInput').files[0];
+
+  if(!roll||!name||!course||!date||!file){ showMsg('Please fill all fields and choose image', 'red'); return; }
+
+  // read file as base64
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    const base64 = e.target.result.split(',')[1]; // remove prefix
+    showMsg('Uploading...', 'blue');
+    try{
+      const payload = {
+        roll, name, course, issue_date: date,
+        image_name: file.name,
+        image_base64: base64,
+        admin_user: document.getElementById('username').value,
+        admin_pass: document.getElementById('password').value
+      };
+      const res = await fetch('/api/add-student', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const j = await res.json();
+      if(j.success){
+        showMsg('Student added and GitHub updated!', 'green');
+        loadPreview();
+      } else {
+        showMsg('Error: '+ (j.error || j.message), 'red');
+      }
+    }catch(err){
+      showMsg('Upload failed: '+err, 'red');
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+// auto show admin if logged in
+if(localStorage.getItem('admin_logged')){
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('adminPanel').style.display='block';
+  loadPreview();
+}
+</script>
+</body>
+</html>
